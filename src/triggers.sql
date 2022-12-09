@@ -6,10 +6,6 @@ CREATE OR REPLACE TRIGGER reduce_free_places_on_course AFTER INSERT ON signing_u
 CREATE OR REPLACE TRIGGER increase_free_places_on_course AFTER DELETE ON signing_up_for_courses
     FOR EACH ROW EXECUTE FUNCTION increment_number_of_free_places_on_course();
 
---При приобретении абонемента клиенту добавляется соответствующее количество занятий
-CREATE OR REPLACE TRIGGER push_classes_to_client AFTER INSERT ON acquisition_of_services
-    FOR EACH ROW EXECUTE FUNCTION add_classes_to_client();
-
 --При записи на групповое занятие количество свободных мест в группе уменьшается
 CREATE OR REPLACE TRIGGER reduce_free_places_in_group AFTER INSERT ON signing_up_for_classes
     FOR EACH ROW EXECUTE FUNCTION decrement_number_of_free_places_in_group();
@@ -31,8 +27,12 @@ CREATE OR REPLACE TRIGGER enroll_to_individual_class AFTER INSERT ON signing_up_
     FOR EACH ROW EXECUTE FUNCTION mark_slot_as_non_free();
 
 --При отмене записи на индивидуальное занятие слот помечается как свободный
-CREATE OR REPLACE TRIGGER cancel_enrolling_to_individual_class AFTER INSERT ON signing_up_for_individual_classes
+CREATE OR REPLACE TRIGGER cancel_enrolling_to_individual_class AFTER DELETE ON signing_up_for_individual_classes
     FOR EACH ROW EXECUTE FUNCTION mark_slot_as_free();
+
+--При приобретении абонемента клиенту добавляется соответствующее количество занятий
+CREATE OR REPLACE TRIGGER push_classes_to_client AFTER INSERT ON acquisition_of_services
+    FOR EACH ROW EXECUTE FUNCTION add_classes_to_client();
 
 
 

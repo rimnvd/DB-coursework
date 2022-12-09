@@ -14,6 +14,7 @@ begin
     then
         raise exception 'No subscription';
     end if;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -28,6 +29,7 @@ begin
     else
         raise exception 'No free places in the group %', new.group_number;
     end if;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -37,6 +39,7 @@ $$
 begin
     UPDATE individual_class_schedule SET enrolling = true
                                      WHERE individual_class_schedule.id = new.slot_id;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -44,13 +47,14 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION decrement_number_of_free_places_on_course() RETURNS TRIGGER AS
 $$
 begin
-    if (SELECT number_of_free_places FROM course WHERE course.name = new.name) - 1 >= 0
+    if (SELECT number_of_free_places FROM course WHERE course.name = new.course_name) - 1 >= 0
     then
         UPDATE course SET number_of_free_places = number_of_free_places - 1
-                      WHERE course.name = new.name;
+                      WHERE course.name = new.course_name;
     else
-        raise exception 'No free places on the course %', new.name;
+        raise exception 'No free places on the course %', new.course_name;
     end if;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -58,12 +62,13 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION increment_number_of_remaining_classes() RETURNS TRIGGER AS
 $$
 begin
-    if (SELECT number_of_remaining_classes FROM client WHERE client.id = new.client_id) IS NOT NULL
-           and (SELECT number_of_remaining_classes FROM client WHERE client.id = new.client_id) <> 2147483647
+    if (SELECT number_of_remaining_classes FROM client WHERE client.id = old.client_id) IS NOT NULL
+           and (SELECT number_of_remaining_classes FROM client WHERE client.id = old.client_id) <> 2147483647
     then
         UPDATE client SET number_of_remaining_classes = number_of_remaining_classes + 1
-                      WHERE client.id = new.client_id;
+                      WHERE client.id = old.client_id;
     end if;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -72,7 +77,8 @@ CREATE OR REPLACE FUNCTION increment_number_of_free_places_in_group() RETURNS TR
 $$
 begin
     UPDATE class_schedule SET number_of_free_places = number_of_free_places + 1
-                          WHERE class_schedule.group_number = new.group_number;
+                          WHERE class_schedule.group_number = old.group_number;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -81,7 +87,8 @@ CREATE OR REPLACE FUNCTION mark_slot_as_free() RETURNS TRIGGER AS
 $$
 begin
     UPDATE individual_class_schedule SET enrolling = false
-                                     WHERE individual_class_schedule.id = new.slot_id;
+                                     WHERE individual_class_schedule.id = old.slot_id;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -90,7 +97,8 @@ CREATE OR REPLACE FUNCTION increment_number_of_free_places_on_course() RETURNS T
 $$
 begin
     UPDATE course SET number_of_free_places = number_of_free_places + 1
-                  WHERE course.name = new.name;
+                  WHERE course.name = old.course_name;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -98,21 +106,22 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION add_classes_to_client() RETURNS TRIGGER AS
 $$
 begin
-    if new.id = 1 or new.id = 2
+    if new.subscription_id = 1 or new.subscription_id = 2
     then UPDATE client SET number_of_remaining_classes = 1
                        WHERE client.id = new.client_id;
-    elsif new.id = 6 or new.id = 7
+    elsif new.subscription_id = 6 or new.subscription_id = 7
     then UPDATE client SET number_of_remaining_classes = 2147483647
                        WHERE client.id = new.client_id;
-    elsif new.id = 3
+    elsif new.subscription_id = 3
     then UPDATE client SET number_of_remaining_classes = 4
                        WHERE client.id = new.client_id;
-    elsif new.id = 4
+    elsif new.subscription_id = 4
     then UPDATE client SET number_of_remaining_classes = 8
                        WHERE client.id = new.client_id;
-    elsif new.id = 5
+    elsif new.subscription_id = 5
     then UPDATE client SET number_of_remaining_classes = 12
                        WHERE client.id = new.client_id;
     end if;
+    return new;
 end;
 $$ LANGUAGE plpgsql;
